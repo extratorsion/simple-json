@@ -48,6 +48,10 @@ template <
     return node_;
   }
 
+  operator bool() const {
+    return has_value();
+  }
+
   T* operator->() {
     return node_;
   }
