@@ -13,6 +13,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <type_traits>
 
 #include "simple_json_utils.h"
 
@@ -25,43 +26,33 @@ using std::string_view;
 struct JsonNode;
 class Json;
 
-struct JsonNodeRef {
-  JsonNodeRef() = default;
 
-  JsonNodeRef(JsonNode* node)
+template <
+    typename T,
+    typename Checker = typename std::enable_if<std::is_same_v<typename std::remove_const_t<T>, JsonNode>, T>::type> 
+    struct  JsonNodeRef {
+
+  JsonNodeRef(T* node=nullptr)
     :node_(node)
-  {}
-
-  JsonNodeRef(const JsonNode* node)
-    :node_(const_cast<JsonNode*>(node))
   {}
 
   bool has_value() const {
     return node_ != nullptr;
   }
 
-  JsonNode* value() {
+  T* value() {
     return node_;
   }
 
-  const JsonNode* operator->() const {
+  const T* operator->() const {
     return node_;
   }
 
-  JsonNode* operator->() {
+  T* operator->() {
     return node_;
   }
 
-  template <typename Key>
-  const JsonNodeRef at(const Key& key) const {
-    if (has_value()) {
-      return (*node_).at(key);
-    } else {
-      return JsonNodeRef();
-    }
-  }
-
-  template <typename Key>
+ template <typename Key>
   JsonNodeRef operator[](const Key& key) {
     if (has_value()) {
       return (*node_)[key];
@@ -69,19 +60,19 @@ struct JsonNodeRef {
       return JsonNodeRef();
     }
   }
-  
-  // JsonNodeRef operator[](size_t index) {
-  //   if (has_value()) {
-  //     return (*node_)[index];
-  //   } else {
-  //     return JsonNodeRef();
-  //   }
-  // }
+
+  template <typename Key>
+  JsonNodeRef<const JsonNode> at(const Key& key) const {
+    if (has_value()) {
+      return (*node_).at(key);
+    } else {
+      return JsonNodeRef<const JsonNode>();
+    }
+  }
 
 private:
-  JsonNode* node_ = nullptr;
+  T* node_ = nullptr;
 };
-
 
 struct JsonNode {
   using ObjType = std::map<string, JsonNode>;
@@ -137,7 +128,7 @@ struct JsonNode {
 
   JsonNode clone() { return *this; }
 
-  const JsonNodeRef at(size_t index) const {
+  JsonNodeRef<const JsonNode> at(size_t index) const {
     if (type_ == List) {
       return {&std::get<List>(data_).at(index)};
     } else {
@@ -145,7 +136,7 @@ struct JsonNode {
     }
   }
 
-  const JsonNodeRef at(const string& key) const {
+  JsonNodeRef<const JsonNode> at(const string& key) const {
     if (type_ == Obj && std::get<Obj>(data_).count(key)) {
       return {&std::get<Obj>(data_).at(key)};
     } else {
@@ -153,7 +144,7 @@ struct JsonNode {
     }
   }
 
-  JsonNodeRef operator[](size_t index) {
+  JsonNodeRef<JsonNode> operator[](size_t index) {
     if (type_ == List) {
       return {&std::get<List>(data_)[index]};
     } else {
@@ -161,7 +152,7 @@ struct JsonNode {
     }
   }
 
-  JsonNodeRef operator[](const string& key) {
+  JsonNodeRef<JsonNode> operator[](const string& key) {
     if (type_ == Obj && std::get<Obj>(data_).count(key)) {
       return {&std::get<Obj>(data_)[key]};
     } else {
@@ -326,8 +317,8 @@ class Json {
  public:
   Json(string str) : raw_str_(move(str)) { valid_ = parse(raw_str_, &root_); }
   bool valid() { return valid_; }
-  JsonNodeRef operator[](const string& key) { return root_[key]; }
-  const JsonNodeRef at(const string& key) { return root_.at(key); }
+  JsonNodeRef<JsonNode> operator[](const string& key) { return root_[key]; }
+  JsonNodeRef<const JsonNode> at(const string& key) { return root_.at(key); }
   string str() const { return root_.str(); }
 
  private:

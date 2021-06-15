@@ -2,3 +2,5 @@ CMakeCache.txt
 CMakeFiles/
 *.cmake
 _deps/
+build/
+.vscode/
