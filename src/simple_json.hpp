@@ -82,7 +82,7 @@ struct JsonNode {
   using ObjType = std::map<string, JsonNode>;
   using ListType = std::vector<JsonNode>;
   using StringType = string;
-  enum Type { Obj, List, /* String, */ OwnedString, Int, Float, Error };
+  enum Type { Obj, List, /* String, */ OwnedString, Int, Float, Bool, Error };
 
   template <typename T>
   static void Reconstruct(JsonNode* node, T&& value) {
@@ -164,11 +164,27 @@ struct JsonNode {
     }
   }
 
+  double toFloat() const {
+    if (type_ == Float) {
+      return std::get<Float>(data_);
+    } else {
+      return 0.;
+    }
+  }
+
   int toInt() const {
     if (type_ == Int) {
       return std::get<Int>(data_);
     } else {
       return 0;
+    }
+  }
+
+  bool toBool() const {
+    if (type_ == Bool) {
+      return std::get<Bool>(data_);
+    } else {
+      return false;
     }
   }
 
@@ -203,6 +219,7 @@ struct JsonNode {
   bool isList() const { return type_ == List; }
   bool isInt() const { return type_ == Int; }
   bool isFloat() const { return type_ == Float; }
+  bool isBool() const { return type_ == Bool; }
 
   string str() const {
     if (type_ == Error) return "";
@@ -246,6 +263,8 @@ struct JsonNode {
         break;
       case Float:
         builder.append(std::to_string(std::get<Float>(data_)));
+      case Bool:
+        builder.append(std::get<Bool>(data_) ? "true": "false");
       default:
         break;
     }
@@ -303,9 +322,19 @@ struct JsonNode {
     return std::get<double>(data_);
   }
 
+  bool& asBool() {
+    type_ = Bool;
+    if (bool* v = std::get_if<bool>(&data_)) {
+      return *v;
+    } else {
+      data_ = bool();
+    }
+    return std::get<bool>(data_);
+  } 
+
  protected:
   Type type_;
-  std::variant<ObjType, ListType, StringType, int, double> data_;
+  std::variant<ObjType, ListType, StringType, int, double, bool> data_;
   friend class Json;
 };
 
@@ -375,13 +404,12 @@ class Json {
     auto& obj_map = root->asObj();
 
     cstr_t p_cur = start + 1;
-    --finish;
 
     string_view last_key;
 
     JsonNode last_node;
 
-    for (; p_cur < finish;) {
+    for (; p_cur < finish - 1;) {
       if (std::isspace(p_cur[0])) {
         ++p_cur;
         continue;
@@ -467,19 +495,24 @@ class Json {
         return finish;
         break;
       default:
-          if (auto number_edge = nextBlockPos(p_cur, finish, [](const char ch) {
+          if (auto val_edge = nextBlockPos(p_cur, finish, [](const char ch) {
               return ch == '}' || ch == '"' || ch == '[' || ch == ']' ||
                   ch == '{' || ch == ',' || std::isspace(ch);
-              }); number_edge != finish) {
-          string_view number_view = MakeView(p_cur, number_edge);
-
-          string num_str(number_view);
-          if (std::regex_match(num_str, FloatPat)) {
-            value_node->asFloat() = atof(num_str.data());
-            return number_edge - 1;
-          } else if (std::regex_match(num_str, IntPat)) {
-            value_node->asInt() = atoi(num_str.data());
-            return number_edge - 1;
+              }); val_edge != finish) {
+          string_view val_view = MakeView(p_cur, val_edge);
+          if (std::regex_match(val_view.begin(), val_view.end(), BoolPat)) {
+            string bool_val(val_view.begin(), val_view.end());
+            value_node->asBool() = (bool_val == "true" ? true : false);
+            return val_edge - 1;
+          } else {
+            string num_str(val_view);
+            if (std::regex_match(num_str, FloatPat)) {
+              value_node->asFloat() = atof(num_str.data());
+              return val_edge - 1;
+            } else if (std::regex_match(num_str, IntPat)) {
+              value_node->asInt() = atoi(num_str.data());
+              return val_edge - 1;
+            }
           }
         }
         return finish;
@@ -562,6 +595,20 @@ class Json {
         node_list.push_back(move(float_node));
       }
       return true;
+    } else if (std::regex_match(list_view.begin(), list_view.end(), BoolListPat)) {
+      list_view.remove_prefix(1);
+      list_view.remove_suffix(1);
+
+      std::vector<string_view> num_vec = SplitString<string_view>(list_view, ',');
+
+      for (const auto& bool_val : num_vec) {
+        JsonNode bool_node;
+        bool val = (string(bool_val) == "true" ? true : false);
+        bool_node.asBool() = val;
+        node_list.push_back(move(bool_node));
+      }
+      return true;
+
     }
     node->type_ = JsonNode::Error;
     return false;

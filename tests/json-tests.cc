@@ -10,7 +10,8 @@ TEST(SimpleJson, Parse) {
                 },
     "{}": "paar",
     "inner": { "ints": [1, 2, 43 , 5]}, 
-    "int": 20
+    "int": 20,
+    "contain-bool": { "bools" : [true ,  false, true , true, true] }
         } 
   
   )";
@@ -23,6 +24,9 @@ TEST(SimpleJson, Parse) {
   EXPECT_STREQ(json["{}"]->toString().data(), "paar");
   EXPECT_EQ(json["int"]->toInt(), 20);
   EXPECT_EQ(int(json["inner"]["ints"]->toList().size()), 4);
+  EXPECT_EQ(int(json["contain-bool"]["bools"]->toList().size()), 5);
+  EXPECT_EQ(json["contain-bool"]["bools"][1]->toBool(), false);
+  EXPECT_EQ(json["contain-bool"]["bools"][2]->toBool(), true);
   EXPECT_EQ(json["inner"]["ints"][2]->toInt(), 43);
 
   vector<string> invalid_json_list = {
@@ -38,4 +42,8 @@ TEST(SimpleJson, Parse) {
     Json json(invlaid_json);
     EXPECT_FALSE(json.valid());
   }
+
+  Json bool_json("{\"value\": true}");
+  EXPECT_TRUE(bool_json.valid());
+  EXPECT_TRUE(bool_json["value"]->toBool());
 }

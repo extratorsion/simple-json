@@ -13,6 +13,8 @@ const std::regex FloatPat("([+-]?[0-9]+\\.[0-9]*|[+-]?[0-9]*\\.[0-9]+)",
                           std::regex_constants::icase);
 const std::regex IntPat("([+-]?[0-9]+|0x[0-9a-f]+|0[0-7]+)");
 
+const std::regex BoolPat("(true|false)");
+
 const std::regex StringListPat(R"(\[\s*("(\\"|\S)*"\s*,?\s*)+\])", DefaultRegOpt);
 
 const std::regex IntListPat(
@@ -21,6 +23,9 @@ const std::regex IntListPat(
 const std::regex FloatListPat(
     R"(\[\s*(([+-]?[0-9]+\.[0-9]*|[+-]?[0-9]*\.[0-9]+)\s*,?\s*)+\])",
     DefaultRegOpt);
+
+const std::regex BoolListPat(R"(\[\s*((true|false)\s*,?\s*)+\])",
+                             DefaultRegOpt);
 
 const std::regex ObjListPat(R"(\[\s*(\{.*\}\s*,?\s*)+\])", DefaultRegOpt);
 

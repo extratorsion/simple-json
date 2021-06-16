@@ -4,6 +4,7 @@ include(FetchContent)
 cmake_minimum_required(VERSION 3.11)
 project(simple_json LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED true)
 
 include_directories(src)
 aux_source_directory(src SRC_FILES)
@@ -20,6 +21,8 @@ endif()
 # fetchcontent_makeavaliable(googletest)
 
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/build)
+
+set(CMAKE_BUILD_TYPE "Debug")
 
 add_executable(
     json-test

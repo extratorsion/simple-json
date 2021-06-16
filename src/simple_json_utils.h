@@ -9,9 +9,11 @@ namespace json {
 
 extern const std::regex FloatPat;
 extern const std::regex IntPat;
+extern const std::regex BoolPat;
 extern const std::regex StringListPat;
 extern const std::regex IntListPat;
 extern const std::regex FloatListPat;
+extern const std::regex BoolListPat;
 extern const std::regex ObjListPat;
 extern const std::regex ObjItemPat;
 
