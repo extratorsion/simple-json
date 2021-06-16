@@ -1,35 +1,48 @@
 #include "simple_json_utils.h"
-#include <sstream>
+
 #include <iomanip>
+#include <sstream>
 
 namespace json {
 
 using std::string;
 
-const auto DefaultRegOpt =
-    std::regex_constants::ECMAScript;
+const auto DefaultRegOpt = std::regex_constants::ECMAScript;
 
-const std::regex FloatPat("([+-]?[0-9]+\\.[0-9]*|[+-]?[0-9]*\\.[0-9]+)",
-                          std::regex_constants::icase);
-const std::regex IntPat("([+-]?[0-9]+|0x[0-9a-f]+|0[0-7]+)");
+#define FLOAT_PAT "([+-]?([0-9]*\\.[0-9]+|[0-9]+\\.?[0-9]*(e[+-]?[0-9]+)?))"
+#define INT_PAT "([+-]?([0-9]+|0x[0-9a-f]+|0[0-7]+|0b[01]+))"
+#define STR_PAT "(\\\"|\S)*"
+#define OBJ_PAT "\\{.*\\}"
 
+const std::regex FloatPat({"(" FLOAT_PAT ")"}, std::regex_constants::icase);
+const std::regex IntPat({"(" INT_PAT ")"}, std::regex_constants::icase);
 const std::regex BoolPat("(true|false)");
 
-const std::regex StringListPat(R"(\[\s*("(\\"|\S)*"\s*,?\s*)+\])", DefaultRegOpt);
+const std::regex StringListPat({"\\["
+                                "(\\s*" STR_PAT "\\s*,)"
+                                "\\s*" STR_PAT "\\s*\\]"},
+                               DefaultRegOpt);
 
-const std::regex IntListPat(
-    R"(\[\s*(([+-]?[0-9]+|0x[0-9a-f]+|0[0-7]+)\s*,?\s*)+\])", DefaultRegOpt);
+const std::regex IntListPat({"\\["
+                             "(\\s*" INT_PAT "\\s*,)*"
+                             "\\s*" INT_PAT "\\s*\\]"},
+                            DefaultRegOpt | std::regex_constants::icase);
 
-const std::regex FloatListPat(
-    R"(\[\s*(([+-]?[0-9]+\.[0-9]*|[+-]?[0-9]*\.[0-9]+)\s*,?\s*)+\])",
-    DefaultRegOpt);
+const std::regex FloatListPat({"\\["
+                               "(\\s*" FLOAT_PAT "\\s*,)*"
+                               "\\s*" FLOAT_PAT "\\s*\\]"},
+                              DefaultRegOpt | std::regex_constants::icase);
 
-const std::regex BoolListPat(R"(\[\s*((true|false)\s*,?\s*)+\])",
+const std::regex BoolListPat(R"(\[(\s*(true|false)\s*,)*\s*(true|false)\s*\])",
                              DefaultRegOpt);
 
-const std::regex ObjListPat(R"(\[\s*(\{.*\}\s*,?\s*)+\])", DefaultRegOpt);
+const std::regex ObjListPat({"\\["
+                             "(\\s*" OBJ_PAT "\\s*,)*"
+                             "\\s*" OBJ_PAT "\\s*"
+                             "\\]"},
+                            DefaultRegOpt);
 
-const std::regex ObjItemPat(R"((\{.*\}))", DefaultRegOpt);
+const std::regex ObjItemPat({"(" OBJ_PAT ")"}, DefaultRegOpt);
 
 auto EscapeJson(const string& raw_str) -> string {
   std::ostringstream oss;
@@ -68,4 +81,34 @@ auto EscapeJson(const string& raw_str) -> string {
   return oss.str();
 }
 
+int str2int(const string& str) {
+  if (str.empty()) {
+    return 0;
+  } 
+
+  int have_sign = int(str[0] == '+' || str[0] == '-');
+
+  if (str.size() > 1 && str[have_sign] == '0') {
+    std::istringstream iss(str);
+    int value = 0;
+    char base = std::tolower(str[1 + have_sign]);
+    if (base == 'x') {
+      iss >> std::hex >> value;
+    } else if (base == 'b') {
+      for (int i = 0; i < str.size() - 2 - have_sign; ++i) {
+        value |= ((str[str.size() - i - 1] - '0') << i);
+      }
+      if (have_sign && str[0] == '-') {
+        value = -value;
+      }
+    } else {
+      iss >> std::oct >> value;
+    }
+    return value;
+  } else {
+    return atoi(str.data());
+  }
 }
+
+
+}  // namespace json

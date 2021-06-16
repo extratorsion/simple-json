@@ -506,13 +506,13 @@ class Json {
             return val_edge - 1;
           } else {
             string num_str(val_view);
-            if (std::regex_match(num_str, FloatPat)) {
+            if (std::regex_match(num_str, IntPat)) {
+              value_node->asInt() = str2int(num_str);
+              return val_edge - 1;
+            } else if (std::regex_match(num_str, FloatPat)) {
               value_node->asFloat() = atof(num_str.data());
               return val_edge - 1;
-            } else if (std::regex_match(num_str, IntPat)) {
-              value_node->asInt() = atoi(num_str.data());
-              return val_edge - 1;
-            }
+            }           
           }
         }
         return finish;
@@ -576,7 +576,7 @@ class Json {
       for (const auto& int_num : num_vec) {
         JsonNode int_node;
         string int_str(int_num);
-        int val = atoi(int_str.data());
+        int val = str2int(int_str);
         int_node.asInt() = val;
         node_list.push_back(move(int_node));
       }

@@ -54,5 +54,7 @@ auto SplitString(const StringT& content, char sep) -> std::vector<StringT> {
   return results;
 }
 
+int str2int(const std::string& str); 
+
 }
 #endif
