@@ -110,13 +110,17 @@ struct JsonNode {
     return *this;
   }
 
-  JsonNode(string&& str) : type_(OwnedString), data_(move(str)) {}
+  JsonNode(const char* str) : type_(OwnedString), data_(string(str)) {}
+
+  JsonNode(string str) : type_(OwnedString), data_(move(str)) {}
 
   JsonNode(ObjType&& objs) : type_(Obj), data_(move(objs)) {}
 
   JsonNode(int value) : type_(Int), data_(value) {}
 
   JsonNode(double value) : type_(Float), data_(value) {}
+
+  JsonNode(bool value) : type_(Bool), data_(value) {}
 
   JsonNode(ListType&& list) : type_(List), data_(move(list)) {}
 
@@ -263,8 +267,10 @@ struct JsonNode {
         break;
       case Float:
         builder.append(std::to_string(std::get<Float>(data_)));
+        break;
       case Bool:
         builder.append(std::get<Bool>(data_) ? "true": "false");
+        break;
       default:
         break;
     }
@@ -728,5 +734,3 @@ class Json {
 };
 
 }  // namespace json
-
-

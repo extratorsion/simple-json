@@ -9,40 +9,40 @@ using std::string;
 
 const auto DefaultRegOpt = std::regex_constants::ECMAScript;
 
-#define FLOAT_PAT "([+-]?([0-9]*\\.[0-9]+|[0-9]+\\.?[0-9]*(e[+-]?[0-9]+)?))"
-#define INT_PAT "([+-]?([0-9]+|0x[0-9a-f]+|0[0-7]+|0b[01]+))"
-#define STR_PAT "(\\\"|\S)*"
-#define OBJ_PAT "\\{.*\\}"
+#define _FLOAT_PAT "([+-]?([0-9]*\\.[0-9]+|[0-9]+\\.?[0-9]*(e[+-]?[0-9]+)?))"
+#define _INT_PAT "([+-]?([0-9]+|0x[0-9a-f]+|0[0-7]+|0b[01]+))"
+#define _STR_PAT "(\\\"|\S)*"
+#define _OBJ_PAT "\\{.*\\}"
 
-const std::regex FloatPat({"(" FLOAT_PAT ")"}, std::regex_constants::icase);
-const std::regex IntPat({"(" INT_PAT ")"}, std::regex_constants::icase);
+const std::regex FloatPat({"(" _FLOAT_PAT ")"}, std::regex_constants::icase);
+const std::regex IntPat({"(" _INT_PAT ")"}, std::regex_constants::icase);
 const std::regex BoolPat("(true|false)");
 
 const std::regex StringListPat({"\\["
-                                "(\\s*" STR_PAT "\\s*,)"
-                                "\\s*" STR_PAT "\\s*\\]"},
+                                "(\\s*" _STR_PAT "\\s*,)"
+                                "\\s*" _STR_PAT "\\s*\\]"},
                                DefaultRegOpt);
 
 const std::regex IntListPat({"\\["
-                             "(\\s*" INT_PAT "\\s*,)*"
-                             "\\s*" INT_PAT "\\s*\\]"},
+                             "(\\s*" _INT_PAT "\\s*,)*"
+                             "\\s*" _INT_PAT "\\s*\\]"},
                             DefaultRegOpt | std::regex_constants::icase);
 
 const std::regex FloatListPat({"\\["
-                               "(\\s*" FLOAT_PAT "\\s*,)*"
-                               "\\s*" FLOAT_PAT "\\s*\\]"},
+                               "(\\s*" _FLOAT_PAT "\\s*,)*"
+                               "\\s*" _FLOAT_PAT "\\s*\\]"},
                               DefaultRegOpt | std::regex_constants::icase);
 
 const std::regex BoolListPat(R"(\[(\s*(true|false)\s*,)*\s*(true|false)\s*\])",
                              DefaultRegOpt);
 
 const std::regex ObjListPat({"\\["
-                             "(\\s*" OBJ_PAT "\\s*,)*"
-                             "\\s*" OBJ_PAT "\\s*"
+                             "(\\s*" _OBJ_PAT "\\s*,)*"
+                             "\\s*" _OBJ_PAT "\\s*"
                              "\\]"},
                             DefaultRegOpt);
 
-const std::regex ObjItemPat({"(" OBJ_PAT ")"}, DefaultRegOpt);
+const std::regex ObjItemPat({"(" _OBJ_PAT ")"}, DefaultRegOpt);
 
 auto EscapeJson(const string& raw_str) -> string {
   std::ostringstream oss;
@@ -109,6 +109,5 @@ int str2int(const string& str) {
     return atoi(str.data());
   }
 }
-
 
 }  // namespace json

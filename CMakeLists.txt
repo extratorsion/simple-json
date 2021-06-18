@@ -9,12 +9,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 include_directories(src)
 aux_source_directory(src SRC_FILES)
 
-fetchcontent_declare(googletest
+FetchContent_Declare(googletest
     URL https://codeload.github.com/google/googletest/zip/release-1.8.0
 )
 
 if (NOT googletest_POPULATED)
-    fetchcontent_populate(googletest)
+    FetchContent_Populate(googletest)
     add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
 endif()
 

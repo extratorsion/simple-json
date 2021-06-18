@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+#include <vector>
 #include "simple_json.hpp"
+
 TEST(SimpleJson, Parse) {
   using namespace std;
   using namespace json;
@@ -67,4 +69,26 @@ TEST(SimpleJson, Parse) {
   Json bool_json("{\"value\": true}");
   EXPECT_TRUE(bool_json.valid());
   EXPECT_TRUE(bool_json["value"]->toBool());
+}
+
+
+TEST(SimpleJson, Generater) {
+  using namespace std;
+  using namespace json;
+
+  JsonNode vec_json;
+  vec_json.insert("name", JsonNode("generator"));
+  auto ints = [] {
+    vector<JsonNode> tmp;
+    for (int i = 1; i <= 10; ++i) {
+      tmp.push_back(JsonNode(i));
+    }
+    return tmp;
+  }();
+  vec_json.insert("numbers", move(ints));
+  vec_json["numbers"]->push(JsonNode(450));
+
+  const char* gen_str =
+      R"({"name": "generator", "numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 450]})";
+  EXPECT_STREQ(vec_json.str().data(), gen_str);
 }
