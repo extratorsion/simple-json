@@ -87,8 +87,9 @@ TEST(SimpleJson, Generater) {
   }();
   vec_json.insert("numbers", move(ints));
   vec_json["numbers"]->push(JsonNode(450));
+  vec_json.insert("z\\skip\\", JsonNode("\"value\""));
 
   const char* gen_str =
-      R"({"name": "generator", "numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 450]})";
+      R"({"name": "generator", "numbers": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 450], "z\\skip\\": "\"value\""})";
   EXPECT_STREQ(vec_json.str().data(), gen_str);
 }

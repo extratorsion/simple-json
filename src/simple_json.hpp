@@ -10,10 +10,10 @@
 #include <stack>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-#include <type_traits>
 
 #include "simple_json_utils.h"
 
@@ -26,37 +26,24 @@ using std::string_view;
 struct JsonNode;
 class Json;
 
-
 template <
     typename T,
-    typename Checker = typename std::enable_if<std::is_same_v<typename std::remove_const_t<T>, JsonNode>, T>::type> 
-    struct  JsonNodeRef {
+    typename Checker = typename std::enable_if<
+        std::is_same_v<typename std::remove_const_t<T>, JsonNode>, T>::type>
+struct JsonNodeRef {
+  JsonNodeRef(T* node = nullptr) : node_(node) {}
 
-  JsonNodeRef(T* node=nullptr)
-    :node_(node)
-  {}
+  bool has_value() const { return node_ != nullptr; }
 
-  bool has_value() const {
-    return node_ != nullptr;
-  }
+  T* value() { return node_; }
 
-  T* value() {
-    return node_;
-  }
+  const T* operator->() const { return node_; }
 
-  const T* operator->() const {
-    return node_;
-  }
+  operator bool() const { return has_value(); }
 
-  operator bool() const {
-    return has_value();
-  }
+  T* operator->() { return node_; }
 
-  T* operator->() {
-    return node_;
-  }
-
- template <typename Key>
+  template <typename Key>
   JsonNodeRef operator[](const Key& key) {
     if (has_value()) {
       return (*node_)[key];
@@ -74,7 +61,7 @@ template <
     }
   }
 
-private:
+ private:
   T* node_ = nullptr;
 };
 
@@ -87,16 +74,14 @@ struct JsonNode {
   template <typename T>
   static void Reconstruct(JsonNode* node, T&& value) {
     node->~JsonNode();
-    new(node)JsonNode(move(value));
+    new (node) JsonNode(move(value));
   }
 
   void insert(string key, JsonNode&& value_node) {
     asObj().insert({move(key), move(value_node)});
   }
 
-  void push(JsonNode&& value_node) {
-    asList().push_back(move(value_node));
-  }
+  void push(JsonNode&& value_node) { asList().push_back(move(value_node)); }
   JsonNode() { type_ = Error; }
 
   JsonNode(JsonNode&& rhs) : type_(rhs.type_), data_(move(rhs.data_)) {
@@ -269,7 +254,7 @@ struct JsonNode {
         builder.append(std::to_string(std::get<Float>(data_)));
         break;
       case Bool:
-        builder.append(std::get<Bool>(data_) ? "true": "false");
+        builder.append(std::get<Bool>(data_) ? "true" : "false");
         break;
       default:
         break;
@@ -336,7 +321,7 @@ struct JsonNode {
       data_ = bool();
     }
     return std::get<bool>(data_);
-  } 
+  }
 
  protected:
   Type type_;
@@ -350,20 +335,21 @@ struct JsonNode {
     break;                    \
   }
 
-
 class Json {
- public:
  public:
   Json(string str) : raw_str_(move(str)) { valid_ = parse(raw_str_, &root_); }
   bool valid() { return valid_; }
   JsonNodeRef<JsonNode> operator[](const string& key) { return root_[key]; }
-  JsonNodeRef<const JsonNode> at(const string& key) { return root_.at(key); }
+  JsonNodeRef<const JsonNode> at(const string& key) const {
+    return root_.at(key);
+  }
   string str() const { return root_.str(); }
+  JsonNodeRef<JsonNode> root() { return {&root_}; }
 
  private:
   using cstr_t = string_view::const_iterator;
   static void PrintView(string_view view) {
-    for (const char ch: view) {
+    for (const char ch : view) {
       putchar(ch);
     }
     putchar('\n');
@@ -380,14 +366,14 @@ class Json {
 
   static string_view Trim(const string& str) {
     string_view view(str);
-    
-    while(view.size() > 0 && std::isspace(view.front())) {
+
+    while (view.size() > 0 && std::isspace(view.front())) {
       view.remove_prefix(1);
     }
-    while(view.size() > 0 && std::isspace(view.back())) {
+    while (view.size() > 0 && std::isspace(view.back())) {
       view.remove_suffix(1);
     }
-    
+
     return view;
   }
 
@@ -426,10 +412,10 @@ class Json {
         last_key = MakeView(p_cur + 1, key_edge);
         p_cur = key_edge + 1;
       } else if (*p_cur == ':') {
-		    p_cur = nextNoneSpacePos(p_cur + 1, finish); 
-		    BREAK_ON_FAILED(p_cur != finish);
+        p_cur = nextNoneSpacePos(p_cur + 1, finish);
+        BREAK_ON_FAILED(p_cur != finish);
         p_cur = parseValue(p_cur, finish, &last_node);
-			  BREAK_ON_FAILED(p_cur != finish);
+        BREAK_ON_FAILED(p_cur != finish);
         ++p_cur;
       } else if (*p_cur == ',') {
         obj_map.insert({string(last_key), move(last_node)});
@@ -485,7 +471,7 @@ class Json {
         return finish;
         break;
       case '[':
-          if (auto edge = findPairEdge(p_cur, finish, '[', ']'); edge != finish) {
+        if (auto edge = findPairEdge(p_cur, finish, '[', ']'); edge != finish) {
           if (parseInList(p_cur, edge + 1, value_node)) {
             return edge;
           }
@@ -493,7 +479,7 @@ class Json {
         return finish;
         break;
       case '{':
-          if (auto edge = findPairEdge(p_cur, finish, '{', '}'); edge != finish) {
+        if (auto edge = findPairEdge(p_cur, finish, '{', '}'); edge != finish) {
           if (parseObj(p_cur, edge + 1, value_node)) {
             return edge;
           }
@@ -501,10 +487,14 @@ class Json {
         return finish;
         break;
       default:
-          if (auto val_edge = nextBlockPos(p_cur, finish, [](const char ch) {
-              return ch == '}' || ch == '"' || ch == '[' || ch == ']' ||
-                  ch == '{' || ch == ',' || std::isspace(ch);
-              }); val_edge != finish) {
+        if (auto val_edge = nextBlockPos(p_cur, finish,
+                                         [](const char ch) {
+                                           return ch == '}' || ch == '"' ||
+                                                  ch == '[' || ch == ']' ||
+                                                  ch == '{' || ch == ',' ||
+                                                  std::isspace(ch);
+                                         });
+            val_edge != finish) {
           string_view val_view = MakeView(p_cur, val_edge);
           if (std::regex_match(val_view.begin(), val_view.end(), BoolPat)) {
             string bool_val(val_view.begin(), val_view.end());
@@ -518,7 +508,7 @@ class Json {
             } else if (std::regex_match(num_str, FloatPat)) {
               value_node->asFloat() = atof(num_str.data());
               return val_edge - 1;
-            }           
+            }
           }
         }
         return finish;
@@ -564,7 +554,8 @@ class Json {
       while (list_view[0] != '"') list_view.remove_prefix(1);
 
       cstr_t p_edge = finish;
-      for (p_edge = findPairEdge(list_view.begin(), list_view.end(), '"', '"'); p_edge != list_view.end();) {
+      for (p_edge = findPairEdge(list_view.begin(), list_view.end(), '"', '"');
+           p_edge != list_view.end();) {
         auto str_view = MakeView(list_view.begin() + 1, p_edge);
         JsonNode str_node;
         stringNodeHandle(str_view, &str_node);
@@ -577,7 +568,8 @@ class Json {
                                 IntListPat)) {
       list_view.remove_prefix(1);
       list_view.remove_suffix(1);
-      std::vector<string_view> num_vec = SplitString<string_view>(list_view, ',');
+      std::vector<string_view> num_vec =
+          SplitString<string_view>(list_view, ',');
 
       for (const auto& int_num : num_vec) {
         JsonNode int_node;
@@ -591,7 +583,8 @@ class Json {
                                 FloatListPat)) {
       list_view.remove_prefix(1);
       list_view.remove_suffix(1);
-      std::vector<string_view> num_vec = SplitString<string_view>(list_view, ',');
+      std::vector<string_view> num_vec =
+          SplitString<string_view>(list_view, ',');
 
       for (const auto& float_num : num_vec) {
         JsonNode float_node;
@@ -601,11 +594,13 @@ class Json {
         node_list.push_back(move(float_node));
       }
       return true;
-    } else if (std::regex_match(list_view.begin(), list_view.end(), BoolListPat)) {
+    } else if (std::regex_match(list_view.begin(), list_view.end(),
+                                BoolListPat)) {
       list_view.remove_prefix(1);
       list_view.remove_suffix(1);
 
-      std::vector<string_view> num_vec = SplitString<string_view>(list_view, ',');
+      std::vector<string_view> num_vec =
+          SplitString<string_view>(list_view, ',');
 
       for (const auto& bool_val : num_vec) {
         JsonNode bool_node;
@@ -614,7 +609,6 @@ class Json {
         node_list.push_back(move(bool_node));
       }
       return true;
-
     }
     node->type_ = JsonNode::Error;
     return false;
@@ -657,7 +651,8 @@ class Json {
     ++p_cur;
     for (; p_cur < finish;) {
       if (*p_cur == '"') {
-          if (p_cur = findStrEdge(p_cur, finish, ignore_espace); p_cur == finish) {
+        if (p_cur = findStrEdge(p_cur, finish, ignore_espace);
+            p_cur == finish) {
           return finish;
         }
       } else if (*p_cur == close) {
